@@ -115,3 +115,5 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+git pull
+npx expo start --tunnel --clear
