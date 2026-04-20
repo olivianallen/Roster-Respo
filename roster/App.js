@@ -1,5 +1,23 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F6F2EA' }}>
+          <Text style={{ fontSize: 16, color: '#2A1F16', textAlign: 'center' }}>
+            {this.state.error.toString()}
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -21,7 +39,7 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 
 import { StoreProvider } from './src/StoreContext';
-import { C } from './src/tokens';
+import { C, setFontFallback } from './src/tokens';
 
 import WelcomeScreen       from './src/screens/WelcomeScreen';
 import EmailScreen         from './src/screens/EmailScreen';
@@ -40,7 +58,7 @@ import CalendarScreen      from './src/screens/CalendarScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Newsreader_400Regular,
     Newsreader_400Regular_Italic,
     Newsreader_500Medium,
@@ -51,7 +69,7 @@ export default function App() {
     JetBrainsMono_500Medium,
   });
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError) {
     return (
       <View style={{ flex: 1, backgroundColor: C.canvas, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={C.clay} />
@@ -59,7 +77,12 @@ export default function App() {
     );
   }
 
+  if (fontError) {
+    setFontFallback(true);
+  }
+
   return (
+    <ErrorBoundary>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StoreProvider>
@@ -89,5 +112,8 @@ export default function App() {
         </StoreProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
+git pull
+npx expo start --tunnel --clear
