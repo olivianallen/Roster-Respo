@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Roster — Signup & Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  body { font-family: 'Inter', -apple-system, system-ui, sans-serif; color: #2a1f16; overscroll-behavior: none; }
+  * { box-sizing: border-box; }
+  button, input, textarea { font-family: inherit; }
+  .design-canvas ::-webkit-scrollbar { width: 0; height: 0; }
+  .topbar {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 100; display: flex; gap: 4px; flex-wrap: wrap; max-width: 95vw;
+    background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
+    border: 1px solid rgba(0,0,0,0.06); border-radius: 16px;
+    padding: 5px; box-shadow: 0 4px 24px rgba(60,40,20,0.08);
+    justify-content: center;
+  }
+  .topbar button {
+    border: none; background: transparent; cursor: pointer;
+    font-size: 11.5px; font-weight: 500; color: #5a4a38;
+    padding: 7px 11px; border-radius: 11px; letter-spacing: -0.1px;
+    transition: all 160ms ease; white-space: nowrap;
+  }
+  .topbar button.active { background: #2a1f16; color: #faf5eb; }
+  .topbar .title {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 15px; color: #2a1f16; padding: 6px 10px 6px 12px;
+    border-right: 1px solid rgba(0,0,0,0.08); margin-right: 4px;
+    display: flex; align-items: center;
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="components/design-canvas.jsx"></script>
+<script type="text/babel" src="components/ios-frame.jsx"></script>
+<script type="text/babel" src="components/roster-screens.jsx"></script>
+
+<script type="text/babel">
+// Flow stages for the full app (onboarding + tracker)
+// 0 welcome · 1 email · 2 verify · 3 profile · 4 goals · 5 notify · 6 done
+// 7 company search · 8 role picker · 9 details · 10 tracker · 11 interview prep · 12 calendar
+const STAGES = [
+  { id: 0,  label: '01 Welcome' },
+  { id: 1,  label: '02 Email' },
+  { id: 2,  label: '03 Verify' },
+  { id: 3,  label: '04 Profile' },
+  { id: 4,  label: '05 Goals' },
+  { id: 5,  label: '06 Notifs' },
+  { id: 6,  label: '07 Done' },
+  { id: 7,  label: '08 Search' },
+  { id: 8,  label: '09 Role' },
+  { id: 9,  label: '10 Details' },
+  { id: 10, label: '11 Tracker' },
+  { id: 11, label: '12 Prep notes' },
+  { id: 12, label: '13 Calendar' },
+];
+
+const LS_KEY = 'roster.active';
+function getInitialActive() {
+  try {
+    const v = localStorage.getItem(LS_KEY);
+    if (v != null) { const n = parseInt(v, 10); if (!Number.isNaN(n) && n >= -1) return n; }
+  } catch (e) {}
+  return -1;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Fully interactive end-to-end flow
+// ─────────────────────────────────────────────────────────────
+function InteractiveFlow({ startStage = 0 }) {
+  const [stage, setStage] = React.useState(startStage);
+  const [email, setEmail] = React.useState('');
+  const [code, setCode] = React.useState('');
+  const [name, setName] = React.useState('');
+  const [role, setRole] = React.useState('');
+  const [goals, setGoals] = React.useState([]);
+
+  // Tracker state
+  const [apps, setApps] = React.useState([]);
+  const [query, setQuery] = React.useState('');
+  const [pickedCompany, setPickedCompany] = React.useState(null);
+  const [pickedRole, setPickedRole] = React.useState(null);
+  const [appStatus, setAppStatus] = React.useState('applied');
+  const [followUp, setFollowUp] = React.useState('7d');
+  const [appRank, setAppRank] = React.useState(0);
+  const [interviewAt, setInterviewAt] = React.useState(null);
+  const [activeAppId, setActiveAppId] = React.useState(null);
+
+  React.useEffect(() => { setStage(startStage); }, [startStage]);
+
+  const toggleGoal = id => setGoals(g => g.includes(id) ? g.filter(x => x !== id) : [...g, id]);
+
+  const commitApp = () => {
+    const id = `app-${Date.now()}`;
+    const newApp = {
+      id,
+      company: pickedCompany,
+      role: pickedRole,
+      status: appStatus,
+      followUp,
+      rank: appRank,
+      interviewAt,
+      notes: {},
+      isNew: true,
+    };
+    setApps(prev => [newApp, ...prev.map(a => ({ ...a, isNew: false }))]);
+    setStage(10);
+    setQuery(''); setPickedCompany(null); setPickedRole(null);
+    setAppStatus('applied'); setFollowUp('7d'); setAppRank(0); setInterviewAt(null);
+    setTimeout(() => setApps(prev => prev.map(a => a.id === id ? { ...a, isNew: false } : a)), 2400);
+  };
+
+  const openPrep = (appId) => { setActiveAppId(appId); setStage(11); };
+  const currentApp = apps.find(a => a.id === activeAppId);
+  const setNotesForActive = (notes) => {
+    setApps(prev => prev.map(a => a.id === activeAppId ? { ...a, notes } : a));
+  };
+
+  switch (stage) {
+    case 0:  return <ScreenWelcome onStart={() => setStage(1)} onSignIn={() => setStage(1)}/>;
+    case 1:  return <ScreenEmail email={email} setEmail={setEmail} onNext={() => setStage(2)} onBack={() => setStage(0)} step={0}/>;
+    case 2:  return <ScreenVerify code={code} setCode={setCode} email={email} onNext={() => setStage(3)} onBack={() => setStage(1)} step={1}/>;
+    case 3:  return <ScreenProfile name={name} setName={setName} role={role} setRole={setRole} onNext={() => setStage(4)} onBack={() => setStage(2)} step={2}/>;
+    case 4:  return <ScreenGoals goals={goals} toggleGoal={toggleGoal} onNext={() => setStage(5)} onBack={() => setStage(3)} step={3}/>;
+    case 5:  return <ScreenNotify onAllow={() => setStage(6)} onSkip={() => setStage(6)} onBack={() => setStage(4)} step={4}/>;
+    case 6:  return <ScreenDone name={name} onFinish={() => setStage(7)}/>;
+    case 7:  return <ScreenCompanySearch query={query} setQuery={setQuery} onPick={c => { setPickedCompany(c); setStage(8); }} onBack={() => setStage(apps.length ? 10 : 6)}/>;
+    case 8:  return <ScreenRolePicker company={pickedCompany} onPick={r => { setPickedRole(r); setStage(9); }} onCustom={() => { setPickedRole({ id: 'custom', title: 'New role', loc: 'Remote', type: 'Full-time', posted: 'now' }); setStage(9); }} onBack={() => setStage(7)}/>;
+    case 9:  return <ScreenAppDetails company={pickedCompany} role={pickedRole} status={appStatus} setStatus={setAppStatus} followUp={followUp} setFollowUp={setFollowUp} rank={appRank} setRank={setAppRank} interviewAt={interviewAt} setInterviewAt={setInterviewAt} onSave={commitApp} onBack={() => setStage(8)}/>;
+    case 10: return <ScreenTracker apps={apps} onAdd={() => setStage(7)} onOpenPrep={openPrep} onOpenCalendar={() => setStage(12)} userName={name}/>;
+    case 11: return <ScreenInterviewPrep
+      company={currentApp?.company}
+      role={currentApp?.role}
+      notes={currentApp?.notes || {}}
+      setNotes={setNotesForActive}
+      onSave={() => setStage(10)}
+      onBack={() => setStage(10)}
+    />;
+    case 12: return <ScreenCalendar apps={apps} onOpenApp={(id) => { setActiveAppId(id); setStage(11); }} onBack={() => setStage(10)}/>;
+    default: return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Non-interactive previews — one snapshot per stage for the canvas
+// ─────────────────────────────────────────────────────────────
+const demoCompany = { id: 'northwind', name: 'Northwind Studio', domain: 'northwind.design', kind: 'Product design · 120 people', color: 'oklch(0.58 0.095 45)' };
+const demoRole = { id: 'r1', title: 'Senior Product Designer', loc: 'Remote · EU', type: 'Full-time', posted: '1d ago', salary: '€90–115k' };
+const demoApp = {
+  id: 'demo', company: demoCompany, role: demoRole, status: 'applied', followUp: '7d',
+  rank: 4,
+  interviewAt: { date: new Date(Date.now() + 4 * 864e5).toISOString().slice(0, 10), time: '14:30' },
+  notes: { why: '• 3 things that excite me:\n  1. Remote-first culture\n  2. Strong design system\n  3. ', star: '' },
+  isNew: true,
+};
+
+function StageSnapshot({ stage }) {
+  const [email, setEmail] = React.useState('jamie@studio.co');
+  const [code, setCode] = React.useState('847293');
+  const [name, setName] = React.useState('Jamie Rivera');
+  const [role, setRole] = React.useState('Product designer');
+  const [goals, setGoals] = React.useState(['ft', 'rm']);
+  const [query, setQuery] = React.useState('north');
+  const [status, setStatus] = React.useState('applied');
+  const [followUp, setFollowUp] = React.useState('7d');
+  const [notes, setNotes] = React.useState(demoApp.notes);
+  const noop = () => {};
+  const tg = id => setGoals(g => g.includes(id) ? g.filter(x => x !== id) : [...g, id]);
+
+  switch (stage) {
+    case 0:  return <ScreenWelcome onStart={noop} onSignIn={noop}/>;
+    case 1:  return <ScreenEmail email={email} setEmail={setEmail} onNext={noop} onBack={noop} step={0}/>;
+    case 2:  return <ScreenVerify code={code} setCode={setCode} email={email} onNext={noop} onBack={noop} step={1}/>;
+    case 3:  return <ScreenProfile name={name} setName={setName} role={role} setRole={setRole} onNext={noop} onBack={noop} step={2}/>;
+    case 4:  return <ScreenGoals goals={goals} toggleGoal={tg} onNext={noop} onBack={noop} step={3}/>;
+    case 5:  return <ScreenNotify onAllow={noop} onSkip={noop} onBack={noop} step={4}/>;
+    case 6:  return <ScreenDone name={name} onFinish={noop}/>;
+    case 7:  return <ScreenCompanySearch query={query} setQuery={setQuery} onPick={noop} onBack={noop}/>;
+    case 8:  return <ScreenRolePicker company={demoCompany} onPick={noop} onCustom={noop} onBack={noop}/>;
+    case 9:  return <ScreenAppDetails company={demoCompany} role={demoRole} status={status} setStatus={setStatus} followUp={followUp} setFollowUp={setFollowUp} rank={4} setRank={noop} interviewAt={demoApp.interviewAt} setInterviewAt={noop} onSave={noop} onBack={noop}/>;
+    case 10: return <ScreenTracker apps={[demoApp]} onAdd={noop} onOpenPrep={noop} onOpenCalendar={noop} userName="Jamie"/>;
+    case 11: return <ScreenInterviewPrep company={demoCompany} role={demoRole} notes={notes} setNotes={setNotes} onSave={noop} onBack={noop}/>;
+    case 12: return <ScreenCalendar apps={[demoApp, {...demoApp, id: 'd2', role: {...demoRole, title: 'Staff Designer'}, company: {...demoCompany, name: 'Harbor Labs', color: 'oklch(0.48 0.085 35)'}, interviewAt: { date: new Date(Date.now() + 9 * 864e5).toISOString().slice(0,10), time: '10:00' }}]} onOpenApp={noop} onBack={noop}/>;
+    default: return null;
+  }
+}
+
+function Phone({ stage, label, onTap }) {
+  return (
+    <div data-screen-label={label}>
+      <div style={{
+        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+        fontSize: 11, color: 'rgba(60,50,40,0.7)',
+        letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12,
+      }}>{label}</div>
+      <div onClick={onTap} style={{ cursor: 'pointer', transition: 'transform 160ms ease' }}
+        onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-4px)')}
+        onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}>
+        <IOSDevice width={320} height={692}>
+          <StageSnapshot stage={stage}/>
+        </IOSDevice>
+      </div>
+    </div>
+  );
+}
+
+function InteractivePhone({ initialStage }) {
+  return (
+    <div data-screen-label="Interactive prototype">
+      <div style={{
+        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+        fontSize: 11, color: 'rgba(60,50,40,0.7)',
+        letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12,
+      }}>↳ Interactive prototype · live state</div>
+      <IOSDevice width={402} height={874}>
+        <InteractiveFlow startStage={initialStage}/>
+      </IOSDevice>
+    </div>
+  );
+}
+
+function App() {
+  const [active, setActive] = React.useState(getInitialActive);
+  React.useEffect(() => { try { localStorage.setItem(LS_KEY, String(active)); } catch (e) {} }, [active]);
+
+  const ONBOARDING = STAGES.slice(0, 7);
+  const TRACKING = STAGES.slice(7);
+
+  return (
+    <>
+      <div className="topbar">
+        <div className="title">Roster</div>
+        <button className={active === -1 ? 'active' : ''} onClick={() => setActive(-1)}>All screens</button>
+        {STAGES.map(s => (
+          <button key={s.id} className={active === s.id ? 'active' : ''} onClick={() => setActive(s.id)}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <DesignCanvas>
+        {active === -1 ? (
+          <>
+            <DCSection
+              title="Onboarding"
+              subtitle="Create account → profile → goals → land on the tracker"
+              gap={36}
+            >
+              {ONBOARDING.map(s => (
+                <Phone key={s.id} stage={s.id} label={s.label} onTap={() => setActive(s.id)}/>
+              ))}
+              <DCPostIt top={-30} left={-190} rotate={-4} width={200}>
+                Earthy modern —<br/>
+                espresso ink, clay accent,<br/>
+                sand neutrals. Instrument<br/>
+                Serif + Inter.
+              </DCPostIt>
+            </DCSection>
+
+            <DCSection
+              title="Add an application & prep"
+              subtitle="Search company → pick open role → set status & follow-up → prep notes"
+              gap={36}
+            >
+              {TRACKING.map(s => (
+                <Phone key={s.id} stage={s.id} label={s.label} onTap={() => setActive(s.id)}/>
+              ))}
+              <DCPostIt top={-30} right={-10} rotate={3} width={220}>
+                Prep notes has 4 sections:<br/>
+                Why this company, STAR<br/>
+                stories, Questions to ask,<br/>
+                Salary & logistics. Autosaves.
+              </DCPostIt>
+            </DCSection>
+          </>
+        ) : (
+          <DCSection
+            title={STAGES.find(s => s.id === active)?.label}
+            subtitle="Interactive prototype — type, tap, add applications, write prep notes."
+            gap={48}
+          >
+            <InteractivePhone initialStage={active}/>
+            <DCPostIt top={40} left={40} rotate={3} width={220}>
+              This frame is live.<br/>
+              Add an application from<br/>
+              the tracker, then open it<br/>
+              to write interview prep.
+            </DCPostIt>
+          </DCSection>
+        )}
+      </DesignCanvas>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
+</script>
+</body>
+</html>
