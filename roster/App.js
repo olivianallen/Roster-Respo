@@ -21,7 +21,7 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 
 import { StoreProvider } from './src/StoreContext';
-import { C } from './src/tokens';
+import { C, setFontFallback } from './src/tokens';
 
 import WelcomeScreen       from './src/screens/WelcomeScreen';
 import EmailScreen         from './src/screens/EmailScreen';
@@ -40,7 +40,7 @@ import CalendarScreen      from './src/screens/CalendarScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Newsreader_400Regular,
     Newsreader_400Regular_Italic,
     Newsreader_500Medium,
@@ -51,12 +51,16 @@ export default function App() {
     JetBrainsMono_500Medium,
   });
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError) {
     return (
       <View style={{ flex: 1, backgroundColor: C.canvas, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={C.clay} />
       </View>
     );
+  }
+
+  if (fontError) {
+    setFontFallback(true);
   }
 
   return (

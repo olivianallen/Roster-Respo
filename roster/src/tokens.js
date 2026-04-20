@@ -14,7 +14,7 @@ export const C = {
   interviewBg: '#F5EDEA',
 };
 
-export const F = {
+const _F = {
   serif:  'Newsreader_400Regular',
   serifI: 'Newsreader_400Regular_Italic',
   serifM: 'Newsreader_500Medium',
@@ -24,5 +24,22 @@ export const F = {
   mono:   'JetBrainsMono_400Regular',
   monoM:  'JetBrainsMono_500Medium',
 };
+
+const _FSys = {
+  serif:  'Georgia',
+  serifI: 'Georgia',
+  serifM: 'Georgia',
+  sans:   'System',
+  sansM:  'System',
+  sansS:  'System',
+  mono:   'Courier New',
+  monoM:  'Courier New',
+};
+
+export let F = { ..._F };
+
+export function setFontFallback(useFallback) {
+  Object.assign(F, useFallback ? _FSys : _F);
+}
 
 export const SP = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 28 };
