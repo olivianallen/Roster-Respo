@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import {
@@ -21,7 +20,7 @@ import {
 } from '@expo-google-fonts/jetbrains-mono';
 
 import { StoreProvider } from './src/StoreContext';
-import { C } from './src/tokens';
+import { C, setFontFallback } from './src/tokens';
 
 import WelcomeScreen       from './src/screens/WelcomeScreen';
 import EmailScreen         from './src/screens/EmailScreen';
@@ -37,10 +36,10 @@ import TrackerScreen       from './src/screens/TrackerScreen';
 import PrepNotesScreen     from './src/screens/PrepNotesScreen';
 import CalendarScreen      from './src/screens/CalendarScreen';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Newsreader_400Regular,
     Newsreader_400Regular_Italic,
     Newsreader_500Medium,
@@ -51,7 +50,7 @@ export default function App() {
     JetBrainsMono_500Medium,
   });
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError) {
     return (
       <View style={{ flex: 1, backgroundColor: C.canvas, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={C.clay} />
@@ -59,35 +58,36 @@ export default function App() {
     );
   }
 
+  if (fontError) {
+    setFontFallback(true);
+  }
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <StoreProvider>
-          <NavigationContainer>
-            <Stack.Navigator
-              screenOptions={{
-                headerShown: false,
-                cardStyle: { backgroundColor: C.canvas },
-                animationEnabled: true,
-              }}
-            >
-              <Stack.Screen name="Welcome"       component={WelcomeScreen} />
-              <Stack.Screen name="Email"         component={EmailScreen} />
-              <Stack.Screen name="Verify"        component={VerifyScreen} />
-              <Stack.Screen name="Profile"       component={ProfileScreen} />
-              <Stack.Screen name="Goals"         component={GoalsScreen} />
-              <Stack.Screen name="Notify"        component={NotifyScreen} />
-              <Stack.Screen name="Done"          component={DoneScreen} />
-              <Stack.Screen name="CompanySearch" component={CompanySearchScreen} />
-              <Stack.Screen name="RolePicker"    component={RolePickerScreen} />
-              <Stack.Screen name="AppDetails"    component={AppDetailsScreen} />
-              <Stack.Screen name="Tracker"       component={TrackerScreen} />
-              <Stack.Screen name="PrepNotes"     component={PrepNotesScreen} />
-              <Stack.Screen name="Calendar"      component={CalendarScreen} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </StoreProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <StoreProvider>
+        <NavigationContainer>
+          <Stack.Navigator
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: C.canvas },
+            }}
+          >
+            <Stack.Screen name="Welcome"       component={WelcomeScreen} />
+            <Stack.Screen name="Email"         component={EmailScreen} />
+            <Stack.Screen name="Verify"        component={VerifyScreen} />
+            <Stack.Screen name="Profile"       component={ProfileScreen} />
+            <Stack.Screen name="Goals"         component={GoalsScreen} />
+            <Stack.Screen name="Notify"        component={NotifyScreen} />
+            <Stack.Screen name="Done"          component={DoneScreen} />
+            <Stack.Screen name="CompanySearch" component={CompanySearchScreen} />
+            <Stack.Screen name="RolePicker"    component={RolePickerScreen} />
+            <Stack.Screen name="AppDetails"    component={AppDetailsScreen} />
+            <Stack.Screen name="Tracker"       component={TrackerScreen} />
+            <Stack.Screen name="PrepNotes"     component={PrepNotesScreen} />
+            <Stack.Screen name="Calendar"      component={CalendarScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </StoreProvider>
+    </SafeAreaProvider>
   );
 }
