@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "search": {
+      "source": "brightdata/skills",
+      "sourceType": "github",
+      "computedHash": "4d1592e91da2f71b22ea814f39d9de05776309cd88d0b8f7c1ae2122efdf85da"
+    }
+  }
+}
